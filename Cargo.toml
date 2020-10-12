@@ -6,8 +6,11 @@ repository = "https://github.com/johnmave126/hm-remote"
 version = "0.1.0"
 authors = ["Youmu <johnmave126@gmail.com.>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+exclude = [
+    ".github/**",
+    ".gitignore",
+]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 btleplug = "0.5"
