@@ -36,7 +36,7 @@ const UUID_NOTIFY: UUID = UUID::B128([
 #[derive(Error, Debug)]
 enum Error {
     #[error("Bluetooth error: {0}")]
-    BlueZ(btleplug::Error),
+    Bluetooth(btleplug::Error),
     #[error("Signal handler registeration error: {0}")]
     CtrlC(#[from] ctrlc::Error),
     #[error("Terminal I/O error: {0}")]
@@ -57,7 +57,7 @@ enum Error {
 
 impl From<btleplug::Error> for Error {
     fn from(err: btleplug::Error) -> Error {
-        Error::BlueZ(err)
+        Error::Bluetooth(err)
     }
 }
 
@@ -257,13 +257,28 @@ fn find_device<P: Peripheral, C: Central<P>>(
     Ok(None)
 }
 
+fn keep_connect<P: Peripheral>(device: &P) -> Result<(), Error> {
+    while !device.is_connected() {
+        let result = device.connect();
+        if let Err(err) = result {
+            match err {
+                btleplug::Error::NotConnected => (),
+                _ => {
+                    return Err(Error::from(err));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn run_console<P: Peripheral>(
     bt_receiver: c_channel::Receiver<CentralEvent>,
     ctclc_receiver: c_channel::Receiver<()>,
     device: P,
 ) -> Result<(), Error> {
     println!("Connecting to {}", device.address());
-    device.connect()?;
+    keep_connect(&device)?;
     let properties = device.properties();
     let name = format!(
         "{} {}",
