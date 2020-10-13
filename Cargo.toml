@@ -3,7 +3,7 @@ name = "hm-remote"
 description = "Remote AT command console for HM series BLE device"
 readme = "README.md"
 repository = "https://github.com/johnmave126/hm-remote"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Youmu <johnmave126@gmail.com.>"]
 edition = "2018"
 exclude = [
@@ -17,7 +17,6 @@ categories = ["command-line-utilities"]
 [dependencies]
 btleplug = "0.5"
 dialoguer = "0.6"
-tokio = { version = "0.2", features = ["rt-threaded", "macros", "sync"] }
 thiserror = "1.0"
 clap = "2.33"
 crossterm = "0.18"
