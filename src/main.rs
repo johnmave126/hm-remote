@@ -378,23 +378,23 @@ fn main() -> Result<(), Error> {
         .setting(AppSettings::ArgRequiredElseHelp)
         .subcommand(
             SubCommand::with_name("scan")
-                .about("scan BLE devices")
+                .about("Scans BLE devices")
                 .arg(
                     Arg::with_name("verbose")
                         .short("v")
                         .long("verbose")
-                        .help("display BLE device update"),
+                        .help("Displays BLE device update"),
                 )
                 .arg(
                     Arg::with_name("filter-unnamed")
                         .short("f")
                         .long("filter-unnamed")
-                        .help("only display BLE device with a name"),
+                        .help("Only displays BLE device with a name"),
                 ),
         )
         .subcommand(
             SubCommand::with_name("connect")
-                .about("connect to a BLE device")
+                .about("Connects to a BLE device")
                 .arg(
                     Arg::with_name("ADDRESS")
                         .required(true)
