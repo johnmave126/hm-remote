@@ -243,7 +243,7 @@ fn find_device<P: Peripheral, C: Central<P>>(
         c_channel::select! {
             recv(bt_receiver) -> event => {
                 let event = event.or(Err(Error::AdapterStopped))?;
-                if let CentralEvent::DeviceDiscovered(addr) = event {
+                if let CentralEvent::DeviceUpdated(addr) = event {
                     if  addr == *device_addr {
                         return Ok(Some(central.peripheral(addr).unwrap()));
                     }
