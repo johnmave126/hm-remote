@@ -77,10 +77,13 @@ fn get_central(manager: &Manager) -> Result<Adapter, Error> {
 }
 
 #[cfg(target_os = "linux")]
-fn get_central(manager: &Manager) -> Result<ConnectedAdapter> {
+fn get_central(manager: &Manager) -> Result<ConnectedAdapter, Error> {
     let adapters = manager.adapters()?;
-    let adapter = adapters.into_iter().nth(0)?;
-    adapter.connect()
+    let adapter = adapters
+        .into_iter()
+        .nth(0)
+        .map_or(Err(Error::NoAdapter), Result::Ok)?;
+    Ok(adapter.connect()?)
 }
 
 fn addr_to_string<P: Peripheral, C: Central<P>>(central: &C, addr: BDAddr) -> String {
