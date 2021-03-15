@@ -1,13 +1,3 @@
-use btleplug::api::{BDAddr, Central, CentralEvent, Peripheral, ValueNotification, UUID};
-#[cfg(target_os = "linux")]
-use btleplug::bluez::{adapter::ConnectedAdapter, manager::Manager};
-#[cfg(target_os = "macos")]
-use btleplug::corebluetooth::{adapter::Adapter, manager::Manager};
-#[cfg(target_os = "windows")]
-use btleplug::winrtble::{adapter::Adapter, manager::Manager};
-
-use clap::{App, AppSettings, Arg, SubCommand};
-
 use std::{
     collections::HashMap,
     io::{stdout, Write},
@@ -17,21 +7,23 @@ use std::{
     time::Duration,
 };
 
+use btleplug::api::{BDAddr, Central, CentralEvent, Peripheral, ValueNotification, WriteType};
+#[cfg(target_os = "linux")]
+use btleplug::bluez::{adapter::ConnectedAdapter, manager::Manager};
+#[cfg(target_os = "macos")]
+use btleplug::corebluetooth::{adapter::Adapter, manager::Manager};
+#[cfg(target_os = "windows")]
+use btleplug::winrtble::{adapter::Adapter, manager::Manager};
+use clap::{App, AppSettings, Arg, SubCommand};
 use crossbeam_channel::{self as c_channel, unbounded};
-
-use thiserror::Error;
-
 use crossterm::{
     queue,
     style::{Colorize, Print, PrintStyledContent},
 };
+use thiserror::Error;
+use uuid::Uuid;
 
-use dialoguer::theme::CustomPromptCharacterTheme;
-
-// 0000ffe1-0000-1000-8000-00805f9b34fb
-const UUID_NOTIFY: UUID = UUID::B128([
-    0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xe1, 0xff, 0x00, 0x00,
-]);
+const UUID_NOTIFY: Uuid = Uuid::from_u128(0x0000ffe1_0000_1000_8000_00805f9b34fb);
 
 #[derive(Error, Debug)]
 enum Error {
@@ -70,20 +62,15 @@ impl From<btleplug::api::ParseBDAddrError> for Error {
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 fn get_central(manager: &Manager) -> Result<Adapter, Error> {
     let adapters = manager.adapters()?;
-    adapters
-        .into_iter()
-        .nth(0)
-        .map_or(Err(Error::NoAdapter), |adapter| Ok(adapter))
+    adapters.into_iter().nth(0).ok_or(Error::NoAdapter)
 }
 
 #[cfg(target_os = "linux")]
-fn get_central(manager: &Manager) -> Result<ConnectedAdapter, Error> {
+fn get_central(manager: &Manager) -> Result<Adapter, Error> {
     let adapters = manager.adapters()?;
-    let adapter = adapters
-        .into_iter()
-        .nth(0)
-        .map_or(Err(Error::NoAdapter), Result::Ok)?;
-    Ok(adapter.connect()?)
+    let adapter = adapters.into_iter().nth(0).ok_or(Error::NoAdapter)?;
+    adapter.set_powered(true)?;
+    Ok(adapter)
 }
 
 fn addr_to_string<P: Peripheral, C: Central<P>>(central: &C, addr: BDAddr) -> String {
@@ -208,9 +195,9 @@ fn create_prompt_channel(
 ) -> c_channel::Receiver<Result<String, Error>> {
     let (sender, receiver) = unbounded();
     thread::spawn(move || loop {
-        let input = dialoguer::Input::<String>::with_theme(&CustomPromptCharacterTheme::new(' '))
+        let input = dialoguer::Input::<String>::new()
             .with_prompt(">")
-            .validate_with(|input: &str| -> Result<(), &str> {
+            .validate_with(|input: &String| -> Result<(), &str> {
                 if !input.starts_with("AT") && input != "quit" {
                     Err("Invalid Input, can only be AT command or quit")
                 } else {
@@ -246,7 +233,7 @@ fn find_device<P: Peripheral, C: Central<P>>(
         c_channel::select! {
             recv(bt_receiver) -> event => {
                 let event = event.or(Err(Error::AdapterStopped))?;
-                if let CentralEvent::DeviceUpdated(addr) = event {
+                if let CentralEvent::DeviceDiscovered(addr) = event {
                     if  addr == *device_addr {
                         return Ok(Some(central.peripheral(addr).unwrap()));
                     }
@@ -341,7 +328,7 @@ fn run_console<P: Peripheral>(
                     break;
                 }
                 for chunk in command.as_bytes().chunks(20) {
-                    device.command(&notify_service, chunk)?;
+                    device.write(&notify_service, chunk, WriteType::WithoutResponse)?;
                 }
                 thread::sleep(Duration::from_millis(10));
                 sync_sender.send(()).unwrap();
