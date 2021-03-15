@@ -9,7 +9,7 @@ use std::{
 
 use btleplug::api::{BDAddr, Central, CentralEvent, Peripheral, ValueNotification, WriteType};
 #[cfg(target_os = "linux")]
-use btleplug::bluez::{adapter::ConnectedAdapter, manager::Manager};
+use btleplug::bluez::{adapter::Adapter, manager::Manager};
 #[cfg(target_os = "macos")]
 use btleplug::corebluetooth::{adapter::Adapter, manager::Manager};
 #[cfg(target_os = "windows")]
