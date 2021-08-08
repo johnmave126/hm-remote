@@ -277,9 +277,10 @@ fn run_console<P: Peripheral>(
     );
     println!("Connected: {}", name);
     let characteristics = device.discover_characteristics()?;
-    if !characteristics.iter().any(|c| c.uuid == UUID_NOTIFY) {
-        return Err(Error::NotHMDevice);
-    }
+    let notify_service = characteristics
+        .iter()
+        .find(|c| c.uuid == UUID_NOTIFY)
+        .ok_or(Error::NotHMDevice)?;
 
     device.on_notification(Box::new(|notification: ValueNotification| {
         let value = notification.value.clone();
@@ -293,10 +294,6 @@ fn run_console<P: Peripheral>(
             );
         }
     }));
-    let notify_service = characteristics
-        .iter()
-        .find(|c| c.uuid == UUID_NOTIFY)
-        .unwrap();
 
     device.subscribe(&notify_service)?;
 
